@@ -36,13 +36,13 @@ font_file_loader_CreateStreamFromKey :: proc "stdcall" (this_ptr: ^dwrite.IFontF
 
 main :: proc() {
     factory: ^dwrite.IFactory
+    p_factory:= &factory
     win_err: win32.HRESULT
 
-    //- rjf: make dwrite factory
-    win_err = dwrite.create_factory(.ISOLATED, factory)
+    win_err = dwrite.create_factory(.ISOLATED, p_factory)
     fmt.println("Factory Error ", win32.GetLastError())
-     
-    //- rjf: register font file loader
+
+    fmt.println(factory)
     
     win_err = dwrite.register_font_file_loader(factory, &font_file_loader)
     fmt.println("Register Error", win32.GetLastError())

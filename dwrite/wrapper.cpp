@@ -1,25 +1,44 @@
 #include "wrapper.h"
 #include <cstdio>
+#include <stdexcept>
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-HRESULT dwDWriteCreateFactory(enum DWRITE_FACTORY_TYPE type, IUnknown ** factory)
+volatile int keepAlive = 0;
+
+HRESULT dwDWriteCreateFactory(enum DWRITE_FACTORY_TYPE type, IUnknown** factory)
 {
     printf("Enum Value: %d\n", type);
     printf("Pointer to Pointer to IUnknown: %p\n", (void*)factory);
-	HRESULT error = DWriteCreateFactory(type, __uuidof(IDWriteFactory), factory);
+	HRESULT error = ::DWriteCreateFactory(type, __uuidof(IDWriteFactory), factory);
+	printf("Pointer to Pointer to IUnknown: %p\n", (void*)factory);
 	printf("HResult Value: %d\n", error);
 	return error;
 }
 
 HRESULT dwRegisterFontFileLoader(IUnknown* factory, IUnknown* fontFileLoader) {
-	printf("Factory pointer: %p\n", factory);
-	printf("FontFileLoader pointer: %p\n", fontFileLoader);
-	HRESULT error = static_cast<IDWriteFactory *>(factory)->RegisterFontFileLoader(static_cast<IDWriteFontFileLoader *>(fontFileLoader));
-	printf("HResult Value: %d\n", error);
+	HRESULT error = 0;
+	// try {
+		printf("Factory pointer: %p\n", factory);
+		printf("FontFileLoader pointer: %p\n", fontFileLoader);
+		IDWriteFactory * dwFactor = static_cast<IDWriteFactory *>(factory);
+		IDWriteFontFileLoader * dwFFL = static_cast<IDWriteFontFileLoader *>(fontFileLoader);
+		printf("Cast Factory pointer: %p\n", dwFactor);
+		printf("Cast Font File Loader pointer: %p\n", dwFFL);
+		printf("This line gets called");
+		error = dwFactor->RegisterFontFileLoader(dwFFL);
+		printf("This line does not :(");
+		printf("Help HResult Value: %d\n", error);
+    // }
+    // catch (const std::exception& e) {
+	// 	printf("This line does not :(");
+    //     printf("Exception caught: %s\n", e.what());
+	// 	// Make sure its not optimized...
+	// 	keepAlive = 1;
+    // }
 	return error;
 }
 

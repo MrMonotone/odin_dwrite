@@ -12,19 +12,19 @@ foreign import dwrite "wrapper.lib"
 foreign dwrite {
 }
 
-create_factory :: proc(type: FACTORY_TYPE, factory: ^IFactory) -> win32.HRESULT {
-	factory := factory
+create_factory :: proc(type: FACTORY_TYPE, factory: ^^IFactory) -> win32.HRESULT {
 	foreign dwrite {
-		dwDWriteCreateFactory :: proc (type: FACTORY_TYPE, factory: ^^win32.IUnknown) -> win32.HRESULT ---
+		dwDWriteCreateFactory :: proc "c" (type: FACTORY_TYPE, factory: ^^IUnknown) -> win32.HRESULT ---
 	}
-	return dwDWriteCreateFactory(type, cast(^^win32.IUnknown)&factory)
+	res := dwDWriteCreateFactory(type, cast(^^IUnknown)factory);
+	return res
 }
 
 register_font_file_loader :: proc(factory: ^IFactory, font_loader: ^IFontFileLoader) -> win32.HRESULT {
 	foreign dwrite {
-		dwRegisterFontFileLoader :: proc (factory: ^win32.IUnknown, font_loader: ^win32.IUnknown) -> win32.HRESULT ---
+		dwRegisterFontFileLoader :: proc "c" (factory: ^IUnknown, font_loader: ^IUnknown) -> win32.HRESULT ---
 	}
-	return dwRegisterFontFileLoader(cast(^win32.IUnknown)factory, cast(^win32.IUnknown)font_loader)
+	return dwRegisterFontFileLoader(cast(^IUnknown)factory, cast(^IUnknown)font_loader)
 }
 
 POINT_2F :: struct {

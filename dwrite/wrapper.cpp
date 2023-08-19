@@ -7,38 +7,20 @@ extern "C"
 {
 #endif
 
-volatile int keepAlive = 0;
-
 HRESULT dwDWriteCreateFactory(enum DWRITE_FACTORY_TYPE type, IUnknown** factory)
 {
-    printf("Enum Value: %d\n", type);
-    printf("Pointer to Pointer to IUnknown: %p\n", (void*)factory);
+    // printf("Enum Value: %d\n", type);
+    // printf("Pointer to Pointer to IUnknown: %p\n", (void*)factory);
 	HRESULT error = ::DWriteCreateFactory(type, __uuidof(IDWriteFactory), factory);
-	printf("Pointer to Pointer to IUnknown: %p\n", (void*)factory);
-	printf("HResult Value: %d\n", error);
+	// printf("Pointer to Pointer to IUnknown: %p\n", (void*)factory);
+	// printf("HResult Value: %d\n", error);
 	return error;
 }
 
 HRESULT dwRegisterFontFileLoader(IUnknown* factory, IUnknown* fontFileLoader) {
-	HRESULT error = 0;
-	// try {
-		printf("Factory pointer: %p\n", factory);
-		printf("FontFileLoader pointer: %p\n", fontFileLoader);
-		IDWriteFactory * dwFactor = static_cast<IDWriteFactory *>(factory);
-		IDWriteFontFileLoader * dwFFL = static_cast<IDWriteFontFileLoader *>(fontFileLoader);
-		printf("Cast Factory pointer: %p\n", dwFactor);
-		printf("Cast Font File Loader pointer: %p\n", dwFFL);
-		printf("This line gets called");
-		error = dwFactor->RegisterFontFileLoader(dwFFL);
-		printf("This line does not :(");
-		printf("Help HResult Value: %d\n", error);
-    // }
-    // catch (const std::exception& e) {
-	// 	printf("This line does not :(");
-    //     printf("Exception caught: %s\n", e.what());
-	// 	// Make sure its not optimized...
-	// 	keepAlive = 1;
-    // }
+	IDWriteFactory* dwFactor = static_cast<IDWriteFactory*>(factory);
+	IDWriteFontFileLoader* dwFFL = static_cast<IDWriteFontFileLoader*>(fontFileLoader);
+	HRESULT error = dwFactor->RegisterFontFileLoader(dwFFL);
 	return error;
 }
 

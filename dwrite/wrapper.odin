@@ -256,7 +256,7 @@ IFontFileLoader_UUID_STRING := "727cad4e-d6af-4c9e-8a08-d695b11caa49"
 IFontFileLoader_UUID := win32.IID{0x727cad4e, 0xd6af, 0x4c9e, {0x8a, 0x08, 0xd6, 0x95, 0xb1, 0x1c, 0xaa, 0x49}}
 IFontFileLoader :: struct #raw_union {
 	#subtype iunknown:            IUnknown,
-	using ifontfileloader_vtable: IFontFileLoader_VTable,
+	using ifontfileloader_vtable: ^IFontFileLoader_VTable,
 }
 IFontFileLoader_VTable :: struct {
 	using iunknown_vtable: IUnknown_VTable,

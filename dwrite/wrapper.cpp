@@ -1,6 +1,5 @@
 #include "wrapper.h"
 #include <cstdio>
-#include <stdexcept>
 
 #ifdef __cplusplus
 extern "C"
@@ -57,9 +56,11 @@ HRESULT dwCreateCustomRenderingParams(IUnknown* factory, IUnknown** renderingPar
 }
 
 HRESULT dwGetGdiInterop(IUnknown* factory, IUnknown** gdiInterop) {
+	HRESULT error = 0;
 	IDWriteFactory* dwFactory = static_cast<IDWriteFactory*>(factory);
 	IDWriteGdiInterop** pgdiInterop = reinterpret_cast<IDWriteGdiInterop **>(gdiInterop);
-	HRESULT error = dwFactory->GetGdiInterop(pgdiInterop);
+	error = dwFactory->GetGdiInterop(pgdiInterop);
+	printf("GetGdiInterop error: %d\n", error);
 	return error;
 }
 

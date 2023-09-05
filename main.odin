@@ -4,6 +4,7 @@ import win32 "core:sys/windows"
 import "core:os"
 import "core:runtime"
 import "core:mem"
+import "core:mem/virtual"
 import "dwrite"
 
 FONT_PATH :: ".\\Roboto.ttf"
@@ -11,7 +12,10 @@ FONT_PATH :: ".\\Roboto.ttf"
 S_OK :: win32.HRESULT(0)
 
 first_free_stream: ^Font_File_Stream
-file_data: []byte
+
+file_data_test_b := #load("./Roboto.ttf")
+file_data_test_s := #load("./tiny.regular.ttf")
+file_data_test := file_data_test_s
 
 Font_File_Stream :: struct {
     lpVtbl: ^dwrite.IFontFileStream_VTable,
@@ -19,7 +23,7 @@ Font_File_Stream :: struct {
     ref_count: u32,
 }
 
-@(link_section="rodata")
+// @(link_section="rodata")
 font_file_stream_vtable : dwrite.IFontFileStream_VTable = {
     QueryInterface = font_file_stream_QueryInterface,
     AddRef = font_file_stream_AddRef,
@@ -30,8 +34,8 @@ font_file_stream_vtable : dwrite.IFontFileStream_VTable = {
     GetLastWriteTime = font_file_stream_GetLastWriteTime,
 }
 
-font_file_stream_QueryInterface :: proc "std" (this_ptr: ^dwrite.IUnknown, riid: ^win32.IID , ppvObject:^rawptr) -> (win32.HRESULT) {
-    context = runtime.default_context()
+font_file_stream_QueryInterface :: proc "std" (this_ptr: ^dwrite.IUnknown, riid: ^win32.IID , ppvObject:^rawptr) -> win32.HRESULT {
+    // context = runtime.default_context()
     res := S_OK
     ppvObject^ = this_ptr
     return res
@@ -45,7 +49,7 @@ font_file_stream_AddRef :: proc "std" (this_ptr: ^dwrite.IUnknown) -> win32.ULON
 
 
 font_file_stream_Release :: proc "std" (this_ptr: ^dwrite.IUnknown) -> win32.ULONG {
-    context = runtime.default_context()
+    // context = runtime.default_context()
     this := cast(^Font_File_Stream)this_ptr
     this.ref_count -= 1
     if this.ref_count == 0 {
@@ -53,30 +57,31 @@ font_file_stream_Release :: proc "std" (this_ptr: ^dwrite.IUnknown) -> win32.ULO
         this.next= first_free_stream
         first_free_stream = this
     }
-
+    // fmt.println("ref count: ", this.ref_count)
     return this.ref_count
 }
 
-data_from_hash :: proc() -> ([]byte) {
-    if (file_data == nil) {
-        ok: bool
-        fd, err := os.open(FONT_PATH)
-        if err != 0 {
-            panic("couldnt open file yo")
-        }
-        file_data, ok = os.read_entire_file_from_handle(fd, context.allocator)
-        if !ok {
-            panic("couldnt open file yo")
-        }
-    }
-    return file_data
-}
+// data_from_hash :: proc() -> (^[]byte) {
+//     if (file_data == nil) {
+//         ok: bool
+//         fd, err := os.open(FONT_PATH)
+//         if err != 0 {
+//             panic("couldnt open file yo")
+//         }
+        
+//         file_data, ok = os.read_entire_file_from_handle(fd)
+//         if !ok {
+//             panic("couldnt open file yo")
+//         }
+//         // virtual.protect(&file_data, size_of(file_data), { .Read })
+//     }
+//     return &file_data
+// }
 
-font_file_stream_ReadFileFragment :: proc "std" (this_ptr: ^dwrite.IFontFileStream, fragment_start: ^rawptr, off: u64, size: u64, fragment_ctx_out: ^rawptr) -> (win32.HRESULT) {
-    context = runtime.default_context()
-    this_ptr := cast(^Font_File_Stream)this_ptr
-    data := data_from_hash()
-    fragment_start^ = raw_data(data[off:])
+font_file_stream_ReadFileFragment :: proc "stdcall" (this_ptr: ^dwrite.IFontFileStream, fragment_start: ^rawptr, off: u64, size: u64, fragment_ctx_out: ^rawptr) -> win32.HRESULT {
+    // context = runtime.default_context()
+    // this := cast(^Font_File_Stream)this_ptr
+    fragment_start^ = raw_data(file_data_test[off:])
     fragment_ctx_out^ = nil
     return S_OK
 }
@@ -87,17 +92,16 @@ font_file_stream_ReleaseFileFragment :: proc "std" (this_ptr: ^dwrite.IFontFileS
 }
 
 font_file_stream_GetFileSize :: proc "std" (this_ptr: ^dwrite.IFontFileStream, out_file_size: ^u64) -> win32.HRESULT {
-    context = runtime.default_context()
-    this_ptr := cast(^Font_File_Stream)this_ptr
-    data := data_from_hash()
-    fmt.println("data size: ",len(data))
+    // context = runtime.default_context()
+    this := cast(^Font_File_Stream)this_ptr
+    // fmt.println("data size: ",len(file_data_test))
 
-    out_file_size^ = cast(u64)len(data)
+    out_file_size^ = cast(u64)len(file_data_test)
     return S_OK
 }
 
-font_file_stream_GetLastWriteTime :: proc "std" (this_ptr: ^dwrite.IFontFileStream, out_time: ^u64) -> (win32.HRESULT) {
-    context = runtime.default_context()
+font_file_stream_GetLastWriteTime :: proc "std" (this_ptr: ^dwrite.IFontFileStream, out_time: ^u64) -> win32.HRESULT {
+    // context = runtime.default_context()s
     out_time^ = 0
     return S_OK
 }
@@ -119,11 +123,9 @@ font_file_loader_vtable : dwrite.IFontFileLoader_VTable = {
 }
 
 
-font_file_loader_QueryInterface:: proc "std" (this_ptr: ^dwrite.IUnknown, riid: ^win32.IID, ppvObject: ^rawptr) -> (win32.HRESULT) {
-    context = runtime.default_context()
+font_file_loader_QueryInterface:: proc "std" (this_ptr: ^dwrite.IUnknown, riid: ^win32.IID, ppvObject: ^rawptr) -> win32.HRESULT {
     res := S_OK
     ppvObject^ = &font_file_loader
-    // fmt.println("QUERY MATE")
     return res
 }
 
@@ -144,18 +146,18 @@ font_file_loader_Release :: proc "std" (this_ptr: ^dwrite.IUnknown) -> win32.ULO
 //     return
 // }
 
-font_file_loader_CreateStreamFromKey :: proc "std" (this_ptr: ^dwrite.IFontFileLoader, key: rawptr, key_size: win32.UINT32, out_stream: ^^dwrite.IFontFileStream) -> (win32.HRESULT) {
+font_file_loader_CreateStreamFromKey :: proc "std" (this_ptr: ^dwrite.IFontFileLoader, key: rawptr, key_size: win32.UINT32, out_stream: ^^dwrite.IFontFileStream) -> win32.HRESULT {
     context = runtime.default_context()
     assert(key_size == size_of(Hash))
     stream := first_free_stream
     if stream == nil {
-        stream = new(Font_File_Stream, context.allocator)
+        stream = new(Font_File_Stream)
     } else {
         if first_free_stream != nil {
             first_free_stream = first_free_stream.next
         }
     }
-    // mem.zero_item(stream)
+    mem.zero_item(stream)
     stream.lpVtbl = &font_file_stream_vtable
     stream.ref_count = 1
     out_stream^ = cast(^dwrite.IFontFileStream)stream
@@ -200,5 +202,3 @@ main :: proc() {
     }
     fmt.println("PLEASE WORK!")
 }
-    
-    

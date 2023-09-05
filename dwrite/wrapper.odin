@@ -14,7 +14,7 @@ foreign dwrite {
 
 create_factory :: proc(type: FACTORY_TYPE, factory: ^^IFactory) -> win32.HRESULT {
 	foreign dwrite {
-		dwCreateFactory :: proc "c" (type: FACTORY_TYPE, factory: ^^IUnknown) -> win32.HRESULT ---
+		dwCreateFactory :: proc (type: FACTORY_TYPE, factory: ^^IUnknown) -> win32.HRESULT ---
 	}
 	res := dwCreateFactory(type, cast(^^IUnknown)factory);
 	return res
@@ -22,21 +22,21 @@ create_factory :: proc(type: FACTORY_TYPE, factory: ^^IFactory) -> win32.HRESULT
 
 register_font_file_loader :: proc(factory: ^IFactory, font_loader: ^IFontFileLoader) -> win32.HRESULT {
 	foreign dwrite {
-		dwRegisterFontFileLoader :: proc "c" (factory: ^IUnknown, font_loader: ^IUnknown) -> win32.HRESULT ---
+		dwRegisterFontFileLoader :: proc (factory: ^IUnknown, font_loader: ^IUnknown) -> win32.HRESULT ---
 	}
 	return dwRegisterFontFileLoader(cast(^IUnknown)factory, cast(^IUnknown)font_loader)
 }
 
 create_rendering_params :: proc(factory: ^IFactory, renderingParams: ^^IRenderingParams) -> win32.HRESULT {
 	foreign dwrite {
-		dwCreateRenderingParams :: proc "c" (factory: ^IUnknown, renderingParams: ^^IUnknown) -> win32.HRESULT ---
+		dwCreateRenderingParams :: proc (factory: ^IUnknown, renderingParams: ^^IUnknown) -> win32.HRESULT ---
 	}
 	return dwCreateRenderingParams(cast(^IUnknown)factory, cast(^^IUnknown)renderingParams)
 }
 
 rendering_params_gamma :: proc(renderingParams: ^IRenderingParams) -> f32 {
 	foreign dwrite {
-		dwRenderingParamsGamma :: proc "c" (renderingParams: ^IUnknown) -> f32 ---
+		dwRenderingParamsGamma :: proc (renderingParams: ^IUnknown) -> f32 ---
 	}
 	return dwRenderingParamsGamma(cast(^IUnknown)renderingParams)
 }
@@ -58,14 +58,14 @@ rendering_params_cleartypelevel :: proc(renderingParams: ^IRenderingParams) -> f
 
 create_custom_rendering_params :: proc(factory: ^IFactory, renderingParams: ^^IRenderingParams) -> win32.HRESULT {
 	foreign dwrite {
-		dwCreateCustomRenderingParams :: proc "c" (factory: ^IUnknown, renderingParams: ^^IUnknown) -> win32.HRESULT ---
+		dwCreateCustomRenderingParams :: proc (factory: ^IUnknown, renderingParams: ^^IUnknown) -> win32.HRESULT ---
 	}
 	return dwCreateCustomRenderingParams(cast(^IUnknown)factory, cast(^^IUnknown)renderingParams)
 }
 
 get_gdi_interop :: proc(factory: ^IFactory, gdiInterop: ^^IGdiInterop) -> win32.HRESULT {
 	foreign dwrite {
-		dwGetGdiInterop :: proc "c" (factory: ^IUnknown, gdiInterop: ^^IUnknown) -> win32.HRESULT ---
+		dwGetGdiInterop :: proc (factory: ^IUnknown, gdiInterop: ^^IUnknown) -> win32.HRESULT ---
 	}
 	return dwGetGdiInterop(cast(^IUnknown)factory, cast(^^IUnknown)gdiInterop)
 }
@@ -79,7 +79,7 @@ create_custom_font_file_reference :: proc(
 ) -> win32.HRESULT {
 
 	foreign dwrite {
-		dwCreateCustomFontFileReference :: proc "c" (
+		dwCreateCustomFontFileReference :: proc (
 			this: ^IUnknown,
 			fontFileReferenceKey: rawptr,
 			fontFileReferenceKeySize: u32,
@@ -101,7 +101,7 @@ create_font_face :: proc(
 ) -> win32.HRESULT {
 
 	foreign dwrite {
-		dwCreateFontFace :: proc "c" (
+		dwCreateFontFace :: proc (
 			factory: ^IUnknown,
 			fontFaceType: FONT_FACE_TYPE,
 			numberOfFiles: u32,
@@ -130,7 +130,7 @@ test :: proc(
 ) -> win32.HRESULT {
 
 	foreign dwrite {
-		dwTest :: proc "c" (
+		dwTest :: proc (
 			this: ^IUnknown,
 			fontFileReferenceKey: rawptr,
 			fontFileReferenceKeySize: u32,
@@ -150,7 +150,7 @@ font_release :: proc(
 ) -> win32.HRESULT {
 
 	foreign dwrite {
-		dwFontRelease :: proc "c" (
+		dwFontRelease :: proc (
 			font_face: ^IUnknown,
 			font_file: ^IUnknown,
 		) -> win32.HRESULT ---
@@ -166,7 +166,7 @@ font_face_get_metrics :: proc(
 	fontFaceMetrics: ^FONT_METRICS
 ) {
 	foreign dwrite {
-		dwFontFaceGetMetrics :: proc "c" (
+		dwFontFaceGetMetrics :: proc (
 			font_face: ^IUnknown,
 			fontFaceMetrics: ^FONT_METRICS,
 		) ---
@@ -181,7 +181,7 @@ font_face_get_glyph_indices :: proc(
 	allocator:= context.allocator,
 ) -> (res:win32.HRESULT) {
 	foreign dwrite {
-		dwFontFaceGetGlyphIndices :: proc "c" (
+		dwFontFaceGetGlyphIndices :: proc (
 			this: ^IFontFace, 
 			codePoints: [^]u32, 
 			codePointCount: u32, 

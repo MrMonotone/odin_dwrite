@@ -7,37 +7,53 @@ import "vendor:directx/dxgi"
 
 foreign import dwrite "wrapper.lib"
 
-@(default_calling_convention = "std")
-@(link_prefix="dwDWrite")
+// @(link_prefix="dw")
+@(default_calling_convention = "c")
 foreign dwrite {
+	dwCreateFactory :: proc (type: FACTORY_TYPE, factory: ^^IUnknown) -> win32.HRESULT ---
+	dwRegisterFontFileLoader :: proc (factory: ^IUnknown, font_loader: ^IUnknown) -> win32.HRESULT ---
+	dwCreateRenderingParams :: proc (factory: ^IUnknown, renderingParams: ^^IUnknown) -> win32.HRESULT ---
+	dwRenderingParamsGamma :: proc (renderingParams: ^IUnknown) -> f32 ---
+	dwCreateCustomRenderingParams :: proc (factory: ^IUnknown, renderingParams: ^^IUnknown) -> win32.HRESULT ---
+	dwGetGdiInterop :: proc (factory: ^IUnknown, gdiInterop: ^^IUnknown) -> win32.HRESULT ---
+	dwCreateCustomFontFileReference :: proc (
+		this: ^IUnknown,
+		fontFileReferenceKey: rawptr,
+		fontFileReferenceKeySize: u32,
+		fontFileLoader: ^IFontFileLoader,
+		fontFile: ^^IUnknown,
+	) -> win32.HRESULT ---
+	dwCreateFontFace :: proc (
+		factory: ^IUnknown,
+		fontFaceType: FONT_FACE_TYPE,
+		numberOfFiles: u32,
+		fontFiles: [^]^IUnknown,
+		faceIndex: u32,
+		fontFaceSimulationFlags: FONT_SIMULATIONS,
+		fontFace: ^^IUnknown,
+	) -> win32.HRESULT ---
+	dwTest :: proc (
+		this: ^IUnknown,
+		fontFileReferenceKey: rawptr,
+		fontFileReferenceKeySize: u32,
+		fontFileLoader: ^IFontFileLoader,
+	) -> win32.HRESULT ---
 }
 
 create_factory :: proc(type: FACTORY_TYPE, factory: ^^IFactory) -> win32.HRESULT {
-	foreign dwrite {
-		dwCreateFactory :: proc (type: FACTORY_TYPE, factory: ^^IUnknown) -> win32.HRESULT ---
-	}
 	res := dwCreateFactory(type, cast(^^IUnknown)factory);
 	return res
 }
 
 register_font_file_loader :: proc(factory: ^IFactory, font_loader: ^IFontFileLoader) -> win32.HRESULT {
-	foreign dwrite {
-		dwRegisterFontFileLoader :: proc (factory: ^IUnknown, font_loader: ^IUnknown) -> win32.HRESULT ---
-	}
 	return dwRegisterFontFileLoader(cast(^IUnknown)factory, cast(^IUnknown)font_loader)
 }
 
 create_rendering_params :: proc(factory: ^IFactory, renderingParams: ^^IRenderingParams) -> win32.HRESULT {
-	foreign dwrite {
-		dwCreateRenderingParams :: proc (factory: ^IUnknown, renderingParams: ^^IUnknown) -> win32.HRESULT ---
-	}
 	return dwCreateRenderingParams(cast(^IUnknown)factory, cast(^^IUnknown)renderingParams)
 }
 
 rendering_params_gamma :: proc(renderingParams: ^IRenderingParams) -> f32 {
-	foreign dwrite {
-		dwRenderingParamsGamma :: proc (renderingParams: ^IUnknown) -> f32 ---
-	}
 	return dwRenderingParamsGamma(cast(^IUnknown)renderingParams)
 }
 
@@ -57,16 +73,10 @@ rendering_params_cleartypelevel :: proc(renderingParams: ^IRenderingParams) -> f
 }
 
 create_custom_rendering_params :: proc(factory: ^IFactory, renderingParams: ^^IRenderingParams) -> win32.HRESULT {
-	foreign dwrite {
-		dwCreateCustomRenderingParams :: proc (factory: ^IUnknown, renderingParams: ^^IUnknown) -> win32.HRESULT ---
-	}
 	return dwCreateCustomRenderingParams(cast(^IUnknown)factory, cast(^^IUnknown)renderingParams)
 }
 
 get_gdi_interop :: proc(factory: ^IFactory, gdiInterop: ^^IGdiInterop) -> win32.HRESULT {
-	foreign dwrite {
-		dwGetGdiInterop :: proc (factory: ^IUnknown, gdiInterop: ^^IUnknown) -> win32.HRESULT ---
-	}
 	return dwGetGdiInterop(cast(^IUnknown)factory, cast(^^IUnknown)gdiInterop)
 }
 
@@ -77,16 +87,6 @@ create_custom_font_file_reference :: proc(
 	fontFileLoader: ^IFontFileLoader,
 	fontFile: ^^IFontFile
 ) -> win32.HRESULT {
-
-	foreign dwrite {
-		dwCreateCustomFontFileReference :: proc (
-			this: ^IUnknown,
-			fontFileReferenceKey: rawptr,
-			fontFileReferenceKeySize: u32,
-			fontFileLoader: ^IFontFileLoader,
-			fontFile: ^^IUnknown,
-		) -> win32.HRESULT ---
-	}
 	return dwCreateCustomFontFileReference(cast(^IUnknown)factory, fontFileReferenceKey, fontFileReferenceKeySize, fontFileLoader, cast(^^IUnknown)fontFile)
 }
 
@@ -100,17 +100,6 @@ create_font_face :: proc(
 	fontFace: ^^IFontFace,
 ) -> win32.HRESULT {
 
-	foreign dwrite {
-		dwCreateFontFace :: proc (
-			factory: ^IUnknown,
-			fontFaceType: FONT_FACE_TYPE,
-			numberOfFiles: u32,
-			fontFiles: [^]^IUnknown,
-			faceIndex: u32,
-			fontFaceSimulationFlags: FONT_SIMULATIONS,
-			fontFace: ^^IUnknown,
-		) -> win32.HRESULT ---
-	}
 	return dwCreateFontFace(
 		cast(^IUnknown)factory, 
 		fontFaceType, 
@@ -128,15 +117,6 @@ test :: proc(
 	fontFileReferenceKeySize: u32,
 	fontFileLoader: ^IFontFileLoader,
 ) -> win32.HRESULT {
-
-	foreign dwrite {
-		dwTest :: proc (
-			this: ^IUnknown,
-			fontFileReferenceKey: rawptr,
-			fontFileReferenceKeySize: u32,
-			fontFileLoader: ^IFontFileLoader,
-		) -> win32.HRESULT ---
-	}
 	return dwTest(
 		cast(^IUnknown)factory, 
 		fontFileReferenceKey, 

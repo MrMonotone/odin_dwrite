@@ -1,4 +1,4 @@
-@REM @echo off
+@echo off
 
 pushd dwrite
 del wrapper.obj wrapper.lib

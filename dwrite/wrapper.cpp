@@ -100,12 +100,12 @@ HRESULT dwTest(
 	IDWriteFactory* dwFactory = static_cast<IDWriteFactory*>(factory);
 	IDWriteFontFileLoader* dwFontFileLoader = static_cast<IDWriteFontFileLoader*>(fontFileLoader);
 	//- rjf: make a "font file reference"... oh boy x2...
-	IDWriteFontFile *font_file = 0;
+	IDWriteFontFile *font_file;
 	error = dwFactory->CreateCustomFontFileReference(key, fontFileReferenceKeySize, dwFontFileLoader, &font_file);
 	printf("CreateCustomFontFileReference error: %d\n", error);
 	// printf("%d",font_file == 0);
 	//- rjf: make dwrite font face
-	IDWriteFontFace *font_face = 0;
+	IDWriteFontFace *font_face;
 	error = dwFactory->CreateFontFace(DWRITE_FONT_FACE_TYPE_UNKNOWN, 1, &font_file, 0, DWRITE_FONT_SIMULATIONS_NONE, &font_face);
 	printf("CreateFontFace error: %d\n", error);
 	return error;

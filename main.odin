@@ -15,15 +15,16 @@ first_free_stream: ^Font_File_Stream
 
 file_data_test_b := #load("./Roboto.ttf")
 file_data_test_s := #load("./tiny.regular.ttf")
-file_data_test := file_data_test_s
+file_data_test : []byte = file_data_test_s
+file_data: []byte
 
 Font_File_Stream :: struct {
-    lpVtbl: ^dwrite.IFontFileStream_VTable,
+    using _: dwrite.IFontFileStream,
     next: ^Font_File_Stream,
     ref_count: u32,
 }
 
-// @(link_section="rodata")
+@(link_section="rodata")
 font_file_stream_vtable : dwrite.IFontFileStream_VTable = {
     QueryInterface = font_file_stream_QueryInterface,
     AddRef = font_file_stream_AddRef,
@@ -61,28 +62,12 @@ font_file_stream_Release :: proc "std" (this_ptr: ^dwrite.IUnknown) -> win32.ULO
     return this.ref_count
 }
 
-// data_from_hash :: proc() -> (^[]byte) {
-//     if (file_data == nil) {
-//         ok: bool
-//         fd, err := os.open(FONT_PATH)
-//         if err != 0 {
-//             panic("couldnt open file yo")
-//         }
-        
-//         file_data, ok = os.read_entire_file_from_handle(fd)
-//         if !ok {
-//             panic("couldnt open file yo")
-//         }
-//         // virtual.protect(&file_data, size_of(file_data), { .Read })
-//     }
-//     return &file_data
-// }
-
 font_file_stream_ReadFileFragment :: proc "stdcall" (this_ptr: ^dwrite.IFontFileStream, fragment_start: ^rawptr, off: u64, size: u64, fragment_ctx_out: ^rawptr) -> win32.HRESULT {
     context = runtime.default_context()
-    // this := cast(^Font_File_Stream)this_ptr
-    fragment_start^ = raw_data(file_data_test[off:])
-    // fmt.println("what")
+    test := raw_data(file_data_test[off:])
+    test2 := rawptr(cast(uintptr)&file_data_test[0] + uintptr(off) * size_of(file_data_test[0]))
+    fmt.println(test == test2)
+    fragment_start^ = test
     fragment_ctx_out^ = nil
     return S_OK
 }
@@ -102,7 +87,7 @@ font_file_stream_GetFileSize :: proc "std" (this_ptr: ^dwrite.IFontFileStream, o
 }
 
 font_file_stream_GetLastWriteTime :: proc "std" (this_ptr: ^dwrite.IFontFileStream, out_time: ^u64) -> win32.HRESULT {
-    // context = runtime.default_context()s
+    // context = runtime.default_context()
     out_time^ = 0
     return S_OK
 }
@@ -140,16 +125,10 @@ font_file_loader_Release :: proc "std" (this_ptr: ^dwrite.IUnknown) -> win32.ULO
     // fmt.println("WE should finish after this...")
     return 1;
 }
-// scope_open :: proc() -> (res:^Scope) {
-//     // res = &Scope {
-//     //     _u64 = {1},
-//     // }
-//     return
-// }
 
 font_file_loader_CreateStreamFromKey :: proc "std" (this_ptr: ^dwrite.IFontFileLoader, key: rawptr, key_size: win32.UINT32, out_stream: ^^dwrite.IFontFileStream) -> win32.HRESULT {
     context = runtime.default_context()
-    // assert(key_size == size_of(Hash))
+    assert(key_size == size_of(Hash))
     stream := first_free_stream
     if stream == nil {
         stream = new(Font_File_Stream)
@@ -159,7 +138,7 @@ font_file_loader_CreateStreamFromKey :: proc "std" (this_ptr: ^dwrite.IFontFileL
         }
     }
     mem.zero_item(stream)
-    stream.lpVtbl = &font_file_stream_vtable
+    stream.ifontfilestream_vtable = &font_file_stream_vtable
     stream.ref_count = 1
     out_stream^ = cast(^dwrite.IFontFileStream)stream
     // fmt.println("Create Stream")
@@ -170,48 +149,13 @@ Hash :: struct {
     _u64: [2]u64,
 }
 
-// main :: proc() {
-//     factory: ^dwrite.IFactory
-//     rendering_params: ^dwrite.IRenderingParams
-//     gdi_interop: ^dwrite.IGdiInterop
-//     win_err: win32.HRESULT
-//     hash := new(Hash)
-//     hash._u64 = {0, 0} // Fake Hash
-//     //- rjf: make dwrite factory
-//     win_err = dwrite.create_factory(.ISOLATED, &factory)
-//     if win_err != S_OK {
-//         panic("help")
-//     }
-     
-//     //- rjf: register font file loader
-//     win_err = dwrite.register_font_file_loader(factory, cast(^dwrite.IFontFileLoader)&font_file_loader)
-//     if win_err != S_OK {
-//         panic("help")
-//     }
-//     //- mono: create custom rendering params
-//     win_err = dwrite.create_custom_rendering_params(factory, &rendering_params)
-//     if win_err != S_OK {
-//         panic("help")
-//     }
-//     //- rjf: setup dwrite/gdi interop
-//     win_err = dwrite.get_gdi_interop(factory, &gdi_interop)
-//     if win_err != S_OK {
-//         panic("help")
-//     }
-//     win_err = dwrite.test(factory, hash, size_of(hash^), cast(^dwrite.IFontFileLoader)&font_file_loader)
-//     if win_err != S_OK {
-//         panic("help")
-//     }
-//     fmt.println("PLEASE WORK!")
-// }
-
 main :: proc() {
     factory: ^dwrite.IFactory
     base_rendering_params: ^dwrite.IRenderingParams
     rendering_params: ^dwrite.IRenderingParams
     gdi_interop: ^dwrite.IGdiInterop
     error: win32.HRESULT
-    hash := new(Hash)
+    hash : Hash
     hash._u64 = {1, 1} // Fake Hash
     //- rjf: make dwrite factory
     error = dwrite.DWriteCreateFactory(.ISOLATED, &dwrite.IFactory_UUID, cast(^^dwrite.IUnknown)&factory);
@@ -246,8 +190,7 @@ main :: proc() {
 
     //- rjf: make a "font file reference"... oh boy x2...
     font_file: ^dwrite.IFontFile
-    fmt.println(size_of(hash^))
-    error = factory->CreateCustomFontFileReference(hash, size_of(hash^), cast(^dwrite.IFontFileLoader)&font_file_loader, &font_file);
+    error = factory->CreateCustomFontFileReference(&hash, size_of(hash), cast(^dwrite.IFontFileLoader)&font_file_loader, &font_file);
     if error != S_OK {
         panic("help")
     }
@@ -255,10 +198,9 @@ main :: proc() {
         panic("help")
     }
     fmt.println("here")
-    fontFiles : []^dwrite.IFontFile = { font_file }
     //- rjf: make dwrite font face
     font_face: ^dwrite.IFontFace
-    error = factory->CreateFontFace(.UNKNOWN, 1, &fontFiles[0], 0, {.BOLD}, &font_face);
+    error = factory->CreateFontFace(.UNKNOWN, 1, &font_file, 0, { }, &font_face);
 
     if error != S_OK {
         panic("help")

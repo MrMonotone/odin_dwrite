@@ -9,7 +9,7 @@ foreign import Dwrite "system:Dwrite.lib"
 
 @(default_calling_convention="stdcall")
 foreign Dwrite {
-	DWriteCreateFactory       :: proc(factoryType: FACTORY_TYPE, iid: win32.REFIID, factory: ^^IUnknown) -> win32.HRESULT ---
+	DWriteCreateFactory :: proc(factoryType: FACTORY_TYPE, iid: win32.REFIID, factory: ^^IUnknown) -> win32.HRESULT ---
 }
 
 

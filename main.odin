@@ -1,6 +1,7 @@
 package main
 import "core:fmt"
 import win32 "core:sys/windows"
+import "core:slice"
 import "core:os"
 import "core:runtime"
 import "core:mem"
@@ -9,15 +10,37 @@ import "dwrite"
 
 S_OK :: win32.HRESULT(0)
 
-file_data_test_b :: #load("./Roboto.ttf")
-file_data_test_s :: #load("./tiny.regular.ttf")
+FONT_PATH :: "C:\\Windows\\Fonts\\arial.ttf"
 
-file_data_test := file_data_test_s
+// file_data_test_b :: #load("./Roboto.ttf")
+// file_data_test_s :: #load("./tiny.regular.ttf")
+
+// file_data_test := file_data_test_s
 hash: Hash
 first_free_stream: ^Font_File_Stream
+file_data: []byte
+
+data_from_hash :: proc() -> []byte {
+    if (file_data == nil) {
+        ok: bool
+        fd, err := os.open(FONT_PATH)
+        if err != 0 {
+            panic("couldnt open file yo")
+        }
+
+        file_data, ok = os.read_entire_file_from_handle(fd)
+        if !ok {
+            panic("couldnt open file yo")
+        }
+        // perhaps we need this?
+        // virtual.protect(&file_data, size_of(file_data), { .Read })
+    }
+    return file_data
+}
+
 
 Font_File_Stream :: struct {
-    using _: dwrite.IFontFileStream,
+    ifontfilestream_vtable: ^dwrite.IFontFileStream_VTable,
     next: ^Font_File_Stream,
     scope: rawptr,
     hash: Hash,
@@ -40,7 +63,7 @@ font_file_loader := Font_File_Loader {
 }
 
 Font_File_Loader :: struct {
-    using _: dwrite.IFontFileLoader,
+    ifontfileloader_vtable: ^dwrite.IFontFileLoader_VTable,
 }
 
 @(link_section="rodata")
@@ -71,7 +94,7 @@ font_file_stream_Release :: proc "std" (this_ptr: ^dwrite.IUnknown) -> win32.ULO
     this := cast(^Font_File_Stream)this_ptr
     this.ref_count -= 1
     if this.ref_count == 0 {
-        this.next= first_free_stream
+        this.next = first_free_stream
         first_free_stream = this
     }
     // fmt.println("ref count: ", this.ref_count)
@@ -80,11 +103,17 @@ font_file_stream_Release :: proc "std" (this_ptr: ^dwrite.IUnknown) -> win32.ULO
 
 font_file_stream_ReadFileFragment :: proc "stdcall" (this_ptr: ^dwrite.IFontFileStream, fragment_start: ^rawptr, off: u64, size: u64, fragment_ctx_out: ^rawptr) -> win32.HRESULT {
     context = runtime.default_context()
-    this := cast(^Font_File_Stream)this_ptr
-    test := raw_data(file_data_test[off:])
-    test2 := rawptr(cast(uintptr)&file_data_test[0] + uintptr(off) * size_of(file_data_test[0]))
-    // fmt.println(this.hash)
-    fragment_start^ = test
+    data := transmute(mem.Raw_Slice)data_from_hash()
+    // Check if the requested fragment is within the file bounds
+    if (off >= cast(u64)data.len) || 
+        ((off + size) > cast(u64)data.len) {
+        err := 0x80070057 // E_INVALIDARG
+        fmt.println("here")
+        // Return an error if the fragment is out of bounds
+        return cast(win32.HRESULT)err
+    }
+
+    fragment_start^ = rawptr(uintptr(data.data) + uintptr(off))
     fragment_ctx_out^ = nil
     return S_OK
 }
@@ -96,9 +125,9 @@ font_file_stream_ReleaseFileFragment :: proc "std" (this_ptr: ^dwrite.IFontFileS
 
 font_file_stream_GetFileSize :: proc "std" (this_ptr: ^dwrite.IFontFileStream, out_file_size: ^u64) -> win32.HRESULT {
     context = runtime.default_context()
-    fmt.println("data size: ",len(file_data_test))
-
-    out_file_size^ = cast(u64)len(file_data_test)
+    data := transmute(mem.Raw_Slice)data_from_hash()
+    fmt.println("Size: ", data.len)
+    out_file_size^ = cast(u64)data.len
     return S_OK
 }
 
@@ -130,7 +159,7 @@ font_file_loader_CreateStreamFromKey :: proc "std" (this_ptr: ^dwrite.IFontFileL
     stream.ifontfilestream_vtable = &font_file_stream_vtable
     mem.copy(&stream.hash, key, size_of(Hash));
     stream.ref_count = 1
-    out_stream^ = stream
+    out_stream^ = cast(^dwrite.IFontFileStream)stream
     // fmt.println("Create Stream")
     return S_OK
 }
@@ -149,6 +178,10 @@ Hash :: struct {
     _u64: [2]u64,
 }
 
+
+// Has to be a problem with RegisterFontFileLoader / CreateCustomFontFileReference /
+// CreateFontFace works with CreateFontFileReference...
+// The problem is probably with ReadFileFragment and how that data is operated on... aka pointer and memory stuff...
 main :: proc() {
     factory: ^dwrite.IFactory
     base_rendering_params: ^dwrite.IRenderingParams
@@ -156,6 +189,7 @@ main :: proc() {
     gdi_interop: ^dwrite.IGdiInterop
     error: win32.HRESULT
     hash._u64 = {123123, 11231231} // Fake Hash
+
     //- rjf: make dwrite factory
     error = dwrite.DWriteCreateFactory(.ISOLATED, &dwrite.IFactory_UUID, cast(^^dwrite.IUnknown)&factory)
     

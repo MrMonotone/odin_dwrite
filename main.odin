@@ -79,9 +79,10 @@ font_file_stream_Release :: proc "std" (this_ptr: ^dwrite.IUnknown) -> win32.ULO
 // }
 
 font_file_stream_ReadFileFragment :: proc "stdcall" (this_ptr: ^dwrite.IFontFileStream, fragment_start: ^rawptr, off: u64, size: u64, fragment_ctx_out: ^rawptr) -> win32.HRESULT {
-    // context = runtime.default_context()
+    context = runtime.default_context()
     // this := cast(^Font_File_Stream)this_ptr
     fragment_start^ = raw_data(file_data_test[off:])
+    // fmt.println("what")
     fragment_ctx_out^ = nil
     return S_OK
 }
@@ -92,9 +93,9 @@ font_file_stream_ReleaseFileFragment :: proc "std" (this_ptr: ^dwrite.IFontFileS
 }
 
 font_file_stream_GetFileSize :: proc "std" (this_ptr: ^dwrite.IFontFileStream, out_file_size: ^u64) -> win32.HRESULT {
-    // context = runtime.default_context()
+    context = runtime.default_context()
     this := cast(^Font_File_Stream)this_ptr
-    // fmt.println("data size: ",len(file_data_test))
+    fmt.println("data size: ",len(file_data_test))
 
     out_file_size^ = cast(u64)len(file_data_test)
     return S_OK
@@ -148,7 +149,7 @@ font_file_loader_Release :: proc "std" (this_ptr: ^dwrite.IUnknown) -> win32.ULO
 
 font_file_loader_CreateStreamFromKey :: proc "std" (this_ptr: ^dwrite.IFontFileLoader, key: rawptr, key_size: win32.UINT32, out_stream: ^^dwrite.IFontFileStream) -> win32.HRESULT {
     context = runtime.default_context()
-    assert(key_size == size_of(Hash))
+    // assert(key_size == size_of(Hash))
     stream := first_free_stream
     if stream == nil {
         stream = new(Font_File_Stream)
@@ -169,35 +170,97 @@ Hash :: struct {
     _u64: [2]u64,
 }
 
+// main :: proc() {
+//     factory: ^dwrite.IFactory
+//     rendering_params: ^dwrite.IRenderingParams
+//     gdi_interop: ^dwrite.IGdiInterop
+//     win_err: win32.HRESULT
+//     hash := new(Hash)
+//     hash._u64 = {0, 0} // Fake Hash
+//     //- rjf: make dwrite factory
+//     win_err = dwrite.create_factory(.ISOLATED, &factory)
+//     if win_err != S_OK {
+//         panic("help")
+//     }
+     
+//     //- rjf: register font file loader
+//     win_err = dwrite.register_font_file_loader(factory, cast(^dwrite.IFontFileLoader)&font_file_loader)
+//     if win_err != S_OK {
+//         panic("help")
+//     }
+//     //- mono: create custom rendering params
+//     win_err = dwrite.create_custom_rendering_params(factory, &rendering_params)
+//     if win_err != S_OK {
+//         panic("help")
+//     }
+//     //- rjf: setup dwrite/gdi interop
+//     win_err = dwrite.get_gdi_interop(factory, &gdi_interop)
+//     if win_err != S_OK {
+//         panic("help")
+//     }
+//     win_err = dwrite.test(factory, hash, size_of(hash^), cast(^dwrite.IFontFileLoader)&font_file_loader)
+//     if win_err != S_OK {
+//         panic("help")
+//     }
+//     fmt.println("PLEASE WORK!")
+// }
+
 main :: proc() {
     factory: ^dwrite.IFactory
+    base_rendering_params: ^dwrite.IRenderingParams
     rendering_params: ^dwrite.IRenderingParams
     gdi_interop: ^dwrite.IGdiInterop
-    win_err: win32.HRESULT
-    hash := Hash { _u64 = {0, 0}} // Fake Hash
+    error: win32.HRESULT
+    hash := new(Hash)
+    hash._u64 = {1, 1} // Fake Hash
     //- rjf: make dwrite factory
-    win_err = dwrite.create_factory(.ISOLATED, &factory)
-    if win_err != S_OK {
-        panic("help")
-    }
-     
+    error = dwrite.DWriteCreateFactory(.ISOLATED, &dwrite.IFactory_UUID, cast(^^dwrite.IUnknown)&factory);
+    
     //- rjf: register font file loader
-    win_err = dwrite.register_font_file_loader(factory, cast(^dwrite.IFontFileLoader)&font_file_loader)
-    if win_err != S_OK {
-        panic("help")
+    error = factory->RegisterFontFileLoader(cast(^dwrite.IFontFileLoader)&font_file_loader);
+    
+    //- rjf: make dwrite base rendering params
+    error = factory->CreateRenderingParams(&base_rendering_params);
+    
+    //- rjf: make dwrite rendering params
+    {
+        gamma := base_rendering_params->GetGamma();
+        enhanced_contrast := base_rendering_params->GetEnhancedContrast();
+        clear_type_level := base_rendering_params->GetClearTypeLevel();
+        error = factory->CreateCustomRenderingParams(gamma,
+                                                        enhanced_contrast,
+                                                        clear_type_level,
+                                                        .FLAT,
+                                                        .DEFAULT,
+                                                        &rendering_params)
+        if error != S_OK {
+            panic("help")
+        }
     }
-    //- mono: create custom rendering params
-    win_err = dwrite.create_custom_rendering_params(factory, &rendering_params)
-    if win_err != S_OK {
-        panic("help")
-    }
+    
     //- rjf: setup dwrite/gdi interop
-    win_err = dwrite.get_gdi_interop(factory, &gdi_interop)
-    if win_err != S_OK {
+    error = factory->GetGdiInterop(&gdi_interop)
+    if error != S_OK {
         panic("help")
     }
-    win_err = dwrite.test(factory, &hash, size_of(hash), cast(^dwrite.IFontFileLoader)&font_file_loader)
-    if win_err != S_OK {
+
+    //- rjf: make a "font file reference"... oh boy x2...
+    font_file: ^dwrite.IFontFile
+    fmt.println(size_of(hash^))
+    error = factory->CreateCustomFontFileReference(hash, size_of(hash^), cast(^dwrite.IFontFileLoader)&font_file_loader, &font_file);
+    if error != S_OK {
+        panic("help")
+    }
+    if error != S_OK {
+        panic("help")
+    }
+    fmt.println("here")
+    fontFiles : []^dwrite.IFontFile = { font_file }
+    //- rjf: make dwrite font face
+    font_face: ^dwrite.IFontFace
+    error = factory->CreateFontFace(.UNKNOWN, 1, &fontFiles[0], 0, {.BOLD}, &font_face);
+
+    if error != S_OK {
         panic("help")
     }
     fmt.println("PLEASE WORK!")

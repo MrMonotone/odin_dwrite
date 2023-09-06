@@ -19,28 +19,8 @@ POINT_2F :: struct {
 	y: f32,
 }
 
-// FONTSIGNATURE :: struct {
-// 	fsUsb: [4]win32.UINT,
-// 	fsCsb: [2]win32.UINT,
-// }
-LF_FACESIZE :: 32
 
-// LOGFONTA :: struct {
-// 	lfHeight: win32.LONG,
-// 	lfWidth: win32.LONG,
-// 	lfEscapement: win32.LONG,
-// 	lfOrientation: win32.LONG,
-// 	lfWeight: win32.LONG,
-// 	lfItalic: win32.BYTE,
-// 	lfUnderline: win32.BYTE,
-// 	lfStrikeOut: win32.BYTE,
-// 	lfCharSet: win32.BYTE,
-// 	lfOutPrecision: win32.BYTE,
-// 	lfClipPrecision: win32.BYTE,
-// 	lfQuality: win32.BYTE,
-// 	lfPitchAndFamily: win32.BYTE,
-// 	lfFaceName: [LF_FACESIZE]win32.CHAR,
-// }
+LF_FACESIZE :: 32
 
 LOGFONTW :: struct {
 	lfHeight: win32.LONG,
@@ -62,50 +42,19 @@ LOGFONTW :: struct {
 IUnknown :: dxgi.IUnknown
 IUnknown_VTable :: dxgi.IUnknown_VTable
 
-// HANDLE :: win32.HANDLE
 BOOL :: win32.BOOL
-// HWND :: win32.HWND
 HDC :: win32.HDC
 HMONITOR :: win32.HMONITOR
 RECT :: win32.RECT
 PWSTR :: win32.wstring
-// POINT :: win32.POINT
 FILETIME :: win32.FILETIME
 SIZE :: win32.SIZE
-
-
-// FONT_AXIS_TAG :: enum u32 {
-// 	WEIGHT       = 1952999287,
-// 	WIDTH        = 1752458359,
-// 	SLANT        = 1953393779,
-// 	OPTICAL_SIZE = 2054385775,
-// 	ITALIC       = 1818326121,
-// }
-
-// COLOR_F :: struct {
-// 	r: f32,
-// 	g: f32,
-// 	b: f32,
-// 	a: f32,
-// }
 
 MEASURING_MODE :: enum i32 {
 	NATURAL,
 	GDI_CLASSIC,
 	GDI_NATURAL,
 }
-
-// GLYPH_IMAGE_FORMATS_Flag :: enum {
-// 	TRUETYPE,
-// 	CFF,
-// 	COLR,
-// 	SVG,
-// 	PNG,
-// 	JPEG,
-// 	TIFF,
-// 	PREMULTIPLIED_B8G8R8A8,
-// }
-// GLYPH_IMAGE_FORMATS :: bit_set[GLYPH_IMAGE_FORMATS_Flag;u32]
 
 FONT_FILE_TYPE :: enum i32 {
 	UNKNOWN             = 0,

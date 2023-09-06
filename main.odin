@@ -9,16 +9,17 @@ import "dwrite"
 
 S_OK :: win32.HRESULT(0)
 
-file_data_test_b := #load("./Roboto.ttf")
-file_data_test_s := #load("./tiny.regular.ttf")
-file_data_test : []byte = file_data_test_b
-hash: Hash
+file_data_test_b :: #load("./Roboto.ttf")
+file_data_test_s :: #load("./tiny.regular.ttf")
 
+file_data_test := file_data_test_s
+hash: Hash
 first_free_stream: ^Font_File_Stream
 
 Font_File_Stream :: struct {
     using _: dwrite.IFontFileStream,
     next: ^Font_File_Stream,
+    scope: rawptr,
     hash: Hash,
     ref_count: u32,
 }
@@ -82,7 +83,7 @@ font_file_stream_ReadFileFragment :: proc "stdcall" (this_ptr: ^dwrite.IFontFile
     this := cast(^Font_File_Stream)this_ptr
     test := raw_data(file_data_test[off:])
     test2 := rawptr(cast(uintptr)&file_data_test[0] + uintptr(off) * size_of(file_data_test[0]))
-    fmt.println(this.hash)
+    // fmt.println(this.hash)
     fragment_start^ = test
     fragment_ctx_out^ = nil
     return S_OK
@@ -124,6 +125,7 @@ font_file_loader_CreateStreamFromKey :: proc "std" (this_ptr: ^dwrite.IFontFileL
             first_free_stream = first_free_stream.next
         }
     }
+    fmt.println("streaming")
     mem.zero_item(stream)
     stream.ifontfilestream_vtable = &font_file_stream_vtable
     mem.copy(&stream.hash, key, size_of(Hash));
@@ -159,29 +161,6 @@ main :: proc() {
     
     //- rjf: register font file loader
     error = factory->RegisterFontFileLoader(cast(^dwrite.IFontFileLoader)&font_file_loader)
-    
-    //- rjf: make dwrite base rendering params
-    error = factory->CreateRenderingParams(&base_rendering_params);
-    
-    //- rjf: make dwrite rendering params
-    gamma := base_rendering_params->GetGamma()
-    enhanced_contrast := base_rendering_params->GetEnhancedContrast()
-    clear_type_level := base_rendering_params->GetClearTypeLevel()
-    error = factory->CreateCustomRenderingParams(gamma,
-                                                enhanced_contrast,
-                                                clear_type_level,
-                                                .FLAT,
-                                                .DEFAULT,
-                                                &rendering_params)
-    if error != S_OK {
-        panic("help")
-    }
-    
-    //- rjf: setup dwrite/gdi interop
-    error = factory->GetGdiInterop(&gdi_interop)
-    if error != S_OK {
-        panic("help")
-    }
 
     //- rjf: make a "font file reference"... oh boy x2...
     font_file: ^dwrite.IFontFile
@@ -189,22 +168,35 @@ main :: proc() {
     if error != S_OK {
         panic("help")
     }
-    fileType: dwrite.FONT_FILE_TYPE
-    faceType: dwrite.FONT_FACE_TYPE
-    numberOfFaces: win32.UINT32
-    isSupported: win32.BOOL
-    error = font_file->Analyze(&isSupported,&fileType, &faceType, &numberOfFaces)
-    if error != S_OK {
-        panic("help")
+
+
+    // See the font file loaded?
+    {
+        fileType: dwrite.FONT_FILE_TYPE
+        faceType: dwrite.FONT_FACE_TYPE
+        numberOfFaces: win32.UINT32
+        isSupported: win32.BOOL
+        error = font_file->Analyze(&isSupported,&fileType, &faceType, &numberOfFaces)
+        if error != S_OK {
+            panic("help")
+        }
+        fmt.println("isSupported ", isSupported, "fileType ", fileType, "faceType ", faceType, "numberOfFaces ", numberOfFaces)
+
+        hash2: rawptr
+        size: u32
+        error = font_file->GetReferenceKey(&hash2, &size)
+        if error != S_OK {
+            panic("help")
+        }
+        fmt.println(cast(^Hash)hash2)
     }
 
-
-    fmt.println("here")
     //- rjf: make dwrite font face
-    font_face: ^dwrite.IFontFace = nil
+    font_face: ^dwrite.IFontFace
     error = factory->CreateFontFace(.UNKNOWN, 1, &font_file, 0, { }, &font_face)
 
     if error != S_OK {
+        fmt.println(error)
         panic("help")
     }
     fmt.println("PLEASE WORK!")

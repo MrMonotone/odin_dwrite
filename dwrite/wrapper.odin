@@ -195,7 +195,7 @@ IFontFileLoader :: struct #raw_union {
 }
 IFontFileLoader_VTable :: struct {
 	using iunknown_vtable: IUnknown_VTable,
-	CreateStreamFromKey:   proc "stdcall" (this: ^IFontFileLoader, fontFileReferenceKey: rawptr, fontFileReferenceKeySize: u32, fontFileStream: ^^IFontFileStream) -> win32.HRESULT,
+	CreateStreamFromKey:   proc "stdcall" (this: ^IFontFileLoader, fontFileReferenceKey: rawptr, fontFileReferenceKeySize: win32.UINT32, fontFileStream: ^^IFontFileStream) -> win32.HRESULT,
 }
 
 IFontFileStream_UUID_STRING := "6d4865fe-0ab8-4d91-8f62-5dd6be34a3e0"
@@ -206,7 +206,7 @@ IFontFileStream :: struct #raw_union {
 }
 IFontFileStream_VTable :: struct {
 	using iunknown_vtable: IUnknown_VTable,
-	ReadFileFragment:      proc "stdcall" (this: ^IFontFileStream, fragmentStart: ^rawptr, fileOffset: u64, fragmentSize: u64, fragmentContext: ^rawptr) -> win32.HRESULT,
+	ReadFileFragment:      proc "stdcall" (this: ^IFontFileStream, fragmentStart: ^rawptr, fileOffset: win32.UINT64, fragmentSize: win32.UINT64, fragmentContext: ^rawptr) -> win32.HRESULT,
 	ReleaseFileFragment:   proc "stdcall" (this: ^IFontFileStream, fragmentContext: rawptr),
 	GetFileSize:           proc "stdcall" (this: ^IFontFileStream, fileSize: ^u64) -> win32.HRESULT,
 	GetLastWriteTime:      proc "stdcall" (this: ^IFontFileStream, lastWriteTime: ^u64) -> win32.HRESULT,
@@ -284,6 +284,7 @@ IFontFace :: struct #raw_union {
 	#subtype iunknown:      IUnknown,
 	using ifontface_vtable: ^IFontFace_VTable,
 }
+
 IFontFace_VTable :: struct {
 	using iunknown_vtable:        IUnknown_VTable,
 	GetType:                      proc "stdcall" (this: ^IFontFace) -> FONT_FACE_TYPE,
@@ -1287,4 +1288,247 @@ BEZIER_SEGMENT :: struct {
 SIZE_U :: struct {
 	width:  u32,
 	height: u32,
+}
+
+LOCALITY :: enum i32 {
+	REMOTE,
+	PARTIAL,
+	LOCAL,
+}
+
+HRESULT :: win32.HRESULT
+
+IFontFaceReference_UUID_STRING := "5e7fa7ca-dde3-424c-89f0-9fcd6fed58cd"
+IFontFaceReference_UUID := win32.IID{0x5e7fa7ca, 0xdde3, 0x424c, {0x89, 0xf0, 0x9f, 0xcd, 0x6f, 0xed, 0x58, 0xcd}}
+IFontFaceReference :: struct #raw_union {
+	#subtype iunknown:               IUnknown,
+	using ifontfacereference_vtable: ^IFontFaceReference_VTable,
+}
+IFontFaceReference_VTable :: struct {
+	using iunknown_vtable:              IUnknown_VTable,
+	CreateFontFace:                     proc "stdcall" (this: ^IFontFaceReference, fontFace: ^^IFontFace3) -> HRESULT,
+	CreateFontFaceWithSimulations:      proc "stdcall" (this: ^IFontFaceReference, fontFaceSimulationFlags: FONT_SIMULATIONS, fontFace: ^^IFontFace3) -> HRESULT,
+	Equals:                             proc "stdcall" (this: ^IFontFaceReference, fontFaceReference: ^IFontFaceReference) -> BOOL,
+	GetFontFaceIndex:                   proc "stdcall" (this: ^IFontFaceReference) -> u32,
+	GetSimulations:                     proc "stdcall" (this: ^IFontFaceReference) -> FONT_SIMULATIONS,
+	GetFontFile:                        proc "stdcall" (this: ^IFontFaceReference, fontFile: ^^IFontFile) -> HRESULT,
+	GetLocalFileSize:                   proc "stdcall" (this: ^IFontFaceReference) -> u64,
+	GetFileSize:                        proc "stdcall" (this: ^IFontFaceReference) -> u64,
+	GetFileTime:                        proc "stdcall" (this: ^IFontFaceReference, lastWriteTime: ^FILETIME) -> HRESULT,
+	GetLocality:                        proc "stdcall" (this: ^IFontFaceReference) -> LOCALITY,
+	EnqueueFontDownloadRequest:         proc "stdcall" (this: ^IFontFaceReference) -> HRESULT,
+	EnqueueCharacterDownloadRequest:    proc "stdcall" (this: ^IFontFaceReference, characters: [^]u8, characterCount: u32) -> HRESULT,
+	EnqueueGlyphDownloadRequest:        proc "stdcall" (this: ^IFontFaceReference, glyphIndices: [^]u16, glyphCount: u32) -> HRESULT,
+	EnqueueFileFragmentDownloadRequest: proc "stdcall" (this: ^IFontFaceReference, fileOffset: u64, fragmentSize: u64) -> HRESULT,
+}
+
+IFontFace3_UUID_STRING := "d37d7598-09be-4222-a236-2081341cc1f2"
+IFontFace3_UUID := win32.IID{0xd37d7598, 0x09be, 0x4222, {0xa2, 0x36, 0x20, 0x81, 0x34, 0x1c, 0xc1, 0xf2}}
+IFontFace3 :: struct #raw_union {
+	#subtype ifontface2:     IFontFace2,
+	using ifontface3_vtable: ^IFontFace3_VTable,
+}
+IFontFace3_VTable :: struct {
+	using ifontface2_vtable:      IFontFace2_VTable,
+	GetFontFaceReference:         proc "stdcall" (this: ^IFontFace3, fontFaceReference: ^^IFontFaceReference) -> HRESULT,
+	GetPanose:                    proc "stdcall" (this: ^IFontFace3, panose: ^PANOSE),
+	GetWeight:                    proc "stdcall" (this: ^IFontFace3) -> FONT_WEIGHT,
+	GetStretch:                   proc "stdcall" (this: ^IFontFace3) -> FONT_STRETCH,
+	GetStyle:                     proc "stdcall" (this: ^IFontFace3) -> FONT_STYLE,
+	GetFamilyNames:               proc "stdcall" (this: ^IFontFace3, names: ^^ILocalizedStrings) -> HRESULT,
+	GetFaceNames:                 proc "stdcall" (this: ^IFontFace3, names: ^^ILocalizedStrings) -> HRESULT,
+	GetInformationalStrings:      proc "stdcall" (
+		this: ^IFontFace3,
+		informationalStringID: INFORMATIONAL_STRING_ID,
+		informationalStrings: ^^ILocalizedStrings,
+		exists: ^BOOL,
+	) -> HRESULT,
+	HasCharacter:                 proc "stdcall" (this: ^IFontFace3, unicodeValue: u32) -> BOOL,
+	GetRecommendedRenderingMode3: proc "stdcall" (
+		this: ^IFontFace3,
+		fontEmSize: f32,
+		dpiX: f32,
+		dpiY: f32,
+		transform: ^MATRIX,
+		isSideways: BOOL,
+		outlineThreshold: OUTLINE_THRESHOLD,
+		measuringMode: MEASURING_MODE,
+		renderingParams: ^IRenderingParams,
+		renderingMode: ^RENDERING_MODE1,
+		gridFitMode: ^GRID_FIT_MODE,
+	) -> HRESULT,
+	IsCharacterLocal:             proc "stdcall" (this: ^IFontFace3, unicodeValue: u32) -> BOOL,
+	IsGlyphLocal:                 proc "stdcall" (this: ^IFontFace3, glyphId: u16) -> BOOL,
+	AreCharactersLocal:           proc "stdcall" (this: ^IFontFace3, characters: [^]u8, characterCount: u32, enqueueIfNotLocal: BOOL, isLocal: ^BOOL) -> HRESULT,
+	AreGlyphsLocal:               proc "stdcall" (this: ^IFontFace3, glyphIndices: [^]u16, glyphCount: u32, enqueueIfNotLocal: BOOL, isLocal: ^BOOL) -> HRESULT,
+}
+
+IFontFace2_UUID_STRING := "d8b768ff-64bc-4e66-982b-ec8e87f693f7"
+IFontFace2_UUID := win32.IID{0xd8b768ff, 0x64bc, 0x4e66, {0x98, 0x2b, 0xec, 0x8e, 0x87, 0xf6, 0x93, 0xf7}}
+IFontFace2 :: struct #raw_union {
+	#subtype ifontface1:     IFontFace1,
+	using ifontface2_vtable: ^IFontFace2_VTable,
+}
+IFontFace2_VTable :: struct {
+	using ifontface1_vtable:      IFontFace1_VTable,
+	IsColorFont:                  proc "stdcall" (this: ^IFontFace2) -> BOOL,
+	GetColorPaletteCount:         proc "stdcall" (this: ^IFontFace2) -> u32,
+	GetPaletteEntryCount:         proc "stdcall" (this: ^IFontFace2) -> u32,
+	GetPaletteEntries:            proc "stdcall" (this: ^IFontFace2, colorPaletteIndex: u32, firstEntryIndex: u32, entryCount: u32, paletteEntries: [^]COLOR_F) -> HRESULT,
+	GetRecommendedRenderingMode2: proc "stdcall" (
+		this: ^IFontFace2,
+		fontEmSize: f32,
+		dpiX: f32,
+		dpiY: f32,
+		transform: ^MATRIX,
+		isSideways: BOOL,
+		outlineThreshold: OUTLINE_THRESHOLD,
+		measuringMode: MEASURING_MODE,
+		renderingParams: ^IRenderingParams,
+		renderingMode: ^RENDERING_MODE,
+		gridFitMode: ^GRID_FIT_MODE,
+	) -> HRESULT,
+}
+
+IFontFace1_UUID_STRING := "a71efdb4-9fdb-4838-ad90-cfc3be8c3daf"
+IFontFace1_UUID := win32.IID{0xa71efdb4, 0x9fdb, 0x4838, {0xad, 0x90, 0xcf, 0xc3, 0xbe, 0x8c, 0x3d, 0xaf}}
+IFontFace1 :: struct #raw_union {
+	#subtype ifontface:      IFontFace,
+	using ifontface1_vtable: ^IFontFace1_VTable,
+}
+IFontFace1_VTable :: struct {
+	using ifontface_vtable:        IFontFace_VTable,
+	GetMetrics1:                   proc "stdcall" (this: ^IFontFace1, fontMetrics: ^FONT_METRICS1),
+	GetGdiCompatibleMetrics1:      proc "stdcall" (this: ^IFontFace1, emSize: f32, pixelsPerDip: f32, transform: ^MATRIX, fontMetrics: ^FONT_METRICS1) -> HRESULT,
+	GetCaretMetrics:               proc "stdcall" (this: ^IFontFace1, caretMetrics: ^CARET_METRICS),
+	GetUnicodeRanges:              proc "stdcall" (this: ^IFontFace1, maxRangeCount: u32, unicodeRanges: [^]UNICODE_RANGE, actualRangeCount: ^u32) -> HRESULT,
+	IsMonospacedFont:              proc "stdcall" (this: ^IFontFace1) -> BOOL,
+	GetDesignGlyphAdvances:        proc "stdcall" (this: ^IFontFace1, glyphCount: u32, glyphIndices: [^]u16, glyphAdvances: [^]i32, isSideways: BOOL) -> HRESULT,
+	GetGdiCompatibleGlyphAdvances: proc "stdcall" (
+		this: ^IFontFace1,
+		emSize: f32,
+		pixelsPerDip: f32,
+		transform: ^MATRIX,
+		useGdiNatural: BOOL,
+		isSideways: BOOL,
+		glyphCount: u32,
+		glyphIndices: [^]u16,
+		glyphAdvances: [^]i32,
+	) -> HRESULT,
+	GetKerningPairAdjustments:     proc "stdcall" (this: ^IFontFace1, glyphCount: u32, glyphIndices: [^]u16, glyphAdvanceAdjustments: [^]i32) -> HRESULT,
+	HasKerningPairs:               proc "stdcall" (this: ^IFontFace1) -> BOOL,
+	GetRecommendedRenderingMode1:  proc "stdcall" (
+		this: ^IFontFace1,
+		fontEmSize: f32,
+		dpiX: f32,
+		dpiY: f32,
+		transform: ^MATRIX,
+		isSideways: BOOL,
+		outlineThreshold: OUTLINE_THRESHOLD,
+		measuringMode: MEASURING_MODE,
+		renderingMode: ^RENDERING_MODE,
+	) -> HRESULT,
+	GetVerticalGlyphVariants:      proc "stdcall" (this: ^IFontFace1, glyphCount: u32, nominalGlyphIndices: [^]u16, verticalGlyphIndices: [^]u16) -> HRESULT,
+	HasVerticalGlyphVariants:      proc "stdcall" (this: ^IFontFace1) -> BOOL,
+}
+
+UNICODE_RANGE :: struct {
+	first: u32,
+	last:  u32,
+}
+
+OUTLINE_THRESHOLD :: enum i32 {
+	ANTIALIASED,
+	ALIASED,
+}
+
+FONT_METRICS1 :: struct {
+	__AnonymousBase_1_L627_C38: FONT_METRICS,
+	glyphBoxLeft:               i16,
+	glyphBoxTop:                i16,
+	glyphBoxRight:              i16,
+	glyphBoxBottom:             i16,
+	subscriptPositionX:         i16,
+	subscriptPositionY:         i16,
+	subscriptSizeX:             i16,
+	subscriptSizeY:             i16,
+	superscriptPositionX:       i16,
+	superscriptPositionY:       i16,
+	superscriptSizeX:           i16,
+	superscriptSizeY:           i16,
+	hasTypographicMetrics:      BOOL,
+}
+PANOSE :: struct {
+	bFamilyType: win32.BYTE,
+	bSerifStyle: win32.BYTE,
+	bWeight: win32.BYTE,
+	bProportion: win32.BYTE,
+	bContrast: win32.BYTE,
+	bStrokeVariation: win32.BYTE,
+	bArmStyle: win32.BYTE,
+	bLetterform: win32.BYTE,
+	bMidline: win32.BYTE,
+	bXHeight: win32.BYTE,
+}
+
+RENDERING_MODE1 :: enum i32 {
+	DEFAULT,
+	ALIASED,
+	GDI_CLASSIC,
+	GDI_NATURAL,
+	NATURAL,
+	NATURAL_SYMMETRIC,
+	OUTLINE,
+	NATURAL_SYMMETRIC_DOWNSAMPLED,
+}
+
+GRID_FIT_MODE :: enum i32 {
+	DEFAULT,
+	DISABLED,
+	ENABLED,
+}
+
+CARET_METRICS :: struct {
+	slopeRise: i16,
+	slopeRun:  i16,
+	offset:    i16,
+}
+
+COLOR_F :: struct {
+	r: f32,
+	g: f32,
+	b: f32,
+	a: f32,
+}
+
+IFactory1_UUID_STRING := "30572f99-dac6-41db-a16e-0486307e606a"
+IFactory1_UUID := win32.IID{0x30572f99, 0xdac6, 0x41db, {0xa1, 0x6e, 0x04, 0x86, 0x30, 0x7e, 0x60, 0x6a}}
+IFactory1 :: struct #raw_union {
+	#subtype ifactory:      IFactory,
+	using ifactory1_vtable: ^IFactory1_VTable,
+}
+IFactory1_VTable :: struct {
+	using ifactory_vtable:        IFactory_VTable,
+	GetEudcFontCollection:        proc "stdcall" (this: ^IFactory1, fontCollection: ^^IFontCollection, checkForUpdates: BOOL) -> HRESULT,
+	CreateCustomRenderingParams1: proc "stdcall" (
+		this: ^IFactory1,
+		gamma: f32,
+		enhancedContrast: f32,
+		enhancedContrastGrayscale: f32,
+		clearTypeLevel: f32,
+		pixelGeometry: PIXEL_GEOMETRY,
+		renderingMode: RENDERING_MODE,
+		renderingParams: ^^IRenderingParams1,
+	) -> HRESULT,
+}
+
+IRenderingParams1_UUID_STRING := "94413cf4-a6fc-4248-8b50-6674348fcad3"
+IRenderingParams1_UUID := win32.IID{0x94413cf4, 0xa6fc, 0x4248, {0x8b, 0x50, 0x66, 0x74, 0x34, 0x8f, 0xca, 0xd3}}
+IRenderingParams1 :: struct #raw_union {
+	#subtype irenderingparams:      IRenderingParams,
+	using irenderingparams1_vtable: ^IRenderingParams1_VTable,
+}
+IRenderingParams1_VTable :: struct {
+	using irenderingparams_vtable: IRenderingParams_VTable,
+	GetGrayscaleEnhancedContrast:  proc "stdcall" (this: ^IRenderingParams1) -> f32,
 }

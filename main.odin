@@ -12,6 +12,7 @@ S_OK :: win32.HRESULT(0)
 
 FONT_PATH :: "C:\\Windows\\Fonts\\arial.ttf"
 
+font_data := #load("./Roboto.ttf")
 fkey: int = 1
 first_free_stream: ^Font_File_Stream
 file_data: []byte
@@ -35,22 +36,24 @@ data_from_hash :: proc() -> []byte {
 }
 
 font_file_stream_ReadFileFragment :: proc "std" (this_ptr: ^dwrite.IFontFileStream, fragment_start: ^rawptr, off: u64, size: u64, fragment_ctx_out: ^rawptr) -> win32.HRESULT {
+    fragment_start := fragment_start
     context = runtime.default_context()
     data := data_from_hash()
-
     // Check if the requested fragment is within the file bounds
     if (off + size > cast(u64)len(data)) {
         err := 0x80070057 // E_INVALIDARG
         // Return an error if the fragment is out of bounds
         return cast(win32.HRESULT)err
     }
-    // test := uintptr(data.data) + uintptr(off)
-    // fmt.println(&(data^))
-    fragment_start^ = raw_data(data[off:])
+    fmt.printf("%p\n", file_data)
+    // testerino: rawptr = raw_data(data[off:])
+    // fragment_start = &testerino
+    // fmt.println(fragment_start^)
+    fragment_start^ = raw_data(font_data[off:])
     fragment_ctx_out^ = nil
+    
     return S_OK
 }
-
 
 Font_File_Stream :: struct {
     using _: dwrite.IFontFileStream,
@@ -86,6 +89,7 @@ font_file_loader_vtable : dwrite.IFontFileLoader_VTable = {
 
 font_file_stream_QueryInterface :: proc "std" (this_ptr: ^dwrite.IUnknown, riid: ^win32.IID , ppvObject:^rawptr) -> win32.HRESULT {
     // context = runtime.default_context()
+    ppvObject := ppvObject
     res := S_OK
     ppvObject^ = this_ptr
     return res
@@ -171,26 +175,50 @@ font_file_loader_Release :: proc "std" (this_ptr: ^dwrite.IUnknown) -> win32.ULO
 // CreateFontFace works with CreateFontFileReference...
 // The problem is probably with ReadFileFragment and how that data is operated on... aka pointer and memory stuff...
 main :: proc() {
-    works()
+    data := [3]u8 {1, 2, 3}
+
+    fragment_start: ^rawptr
+    for off in 0..<len(data) {
+        slice_data := data[off:]
+        slice_size := len(data[off:])
+
+        testerino: rawptr = raw_data(slice_data)
+        fragment_start = &testerino
+
+        test_address := (cast(^u8)fragment_start^)^
+        fmt.println(test_address)
+    }
+
+
+    // off: u64
+
+    // data := [3]u8 {1, 2, 3}
+    // for off in 0..< len(data) {
+    //     test123 := data[off:]
+    //     fmt.println(test123)
+
+        
+    // }
+
+    // works()
     no_works()
 }
 
 no_works :: proc() {
-    factory: ^dwrite.IFactory
+    factory: ^dwrite.IFactory1
     base_rendering_params: ^dwrite.IRenderingParams
     rendering_params: ^dwrite.IRenderingParams
-    gdi_interop: ^dwrite.IGdiInterop
     error: win32.HRESULT
 
     //- rjf: make dwrite factory
-    error = dwrite.DWriteCreateFactory(.ISOLATED, &dwrite.IFactory_UUID, cast(^^dwrite.IUnknown)&factory)
+    error = dwrite.DWriteCreateFactory(.ISOLATED, &dwrite.IFactory1_UUID, cast(^^dwrite.IUnknown)&factory)
     
     //- rjf: register font file loader
     error = factory->RegisterFontFileLoader(cast(^dwrite.IFontFileLoader)&font_file_loader)
 
     //- rjf: make a "font file reference"... oh boy x2...
     font_file: ^dwrite.IFontFile
-    error = factory->CreateCustomFontFileReference(&fkey, size_of(fkey) * 50, cast(^dwrite.IFontFileLoader)&font_file_loader, &font_file)
+    error = factory->CreateCustomFontFileReference(&fkey, size_of(fkey), cast(^dwrite.IFontFileLoader)&font_file_loader, &font_file)
     if error != S_OK {
         panic("help")
     }
@@ -229,29 +257,29 @@ no_works :: proc() {
 }
 
 works :: proc() {
-    factory: ^dwrite.IFactory
-    base_rendering_params: ^dwrite.IRenderingParams
-    rendering_params: ^dwrite.IRenderingParams
-    gdi_interop: ^dwrite.IGdiInterop
-    error: win32.HRESULT
+    // factory: ^dwrite.IFactory
+    // base_rendering_params: ^dwrite.IRenderingParams
+    // rendering_params: ^dwrite.IRenderingParams
+    // gdi_interop: ^dwrite.IGdiInterop
+    // error: win32.HRESULT
 
-    //- rjf: make dwrite factory
-    error = dwrite.DWriteCreateFactory(.ISOLATED, &dwrite.IFactory_UUID, cast(^^dwrite.IUnknown)&factory)
+    // //- rjf: make dwrite factory
+    // error = dwrite.DWriteCreateFactory(.ISOLATED, &dwrite.IFactory_UUID, cast(^^dwrite.IUnknown)&factory)
 
-    //- rjf: make a "font file reference"... oh boy x2...
-    font_file: ^dwrite.IFontFile
-    error = factory->CreateFontFileReference(win32.L(FONT_PATH), nil, &font_file)
-    if error != S_OK {
-        panic("help")
-    }
-    // test : =
-    //- rjf: make dwrite font face
-    font_face: ^dwrite.IFontFace
-    error = factory->CreateFontFace(.UNKNOWN, 1, &font_file, 0, { }, &font_face)
+    // //- rjf: make a "font file reference"... oh boy x2...
+    // font_file: ^dwrite.IFontFile
+    // error = factory->CreateFontFileReference(win32.L(FONT_PATH), nil, &font_file)
+    // if error != S_OK {
+    //     panic("help")
+    // }
+    // // test : =
+    // //- rjf: make dwrite font face
+    // // font_face: ^dwrite.IFontFace = nil
+    // // error = factory->CreateFontFace(.UNKNOWN, 1, &font_file, 0, { }, &font_face)
 
-    if error != S_OK {
-        fmt.println(error)
-        panic("help")
-    }
-    fmt.println(font_face)
+    // if error != S_OK {
+    //     fmt.println(error)
+    //     panic("help")
+    // }
+    // fmt.println(font_face)
 }

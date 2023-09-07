@@ -211,7 +211,7 @@ no_works :: proc() {
     error: win32.HRESULT
 
     //- rjf: make dwrite factory
-    error = dwrite.DWriteCreateFactory(.ISOLATED, &dwrite.IFactory1_UUID, cast(^^dwrite.IUnknown)&factory)
+    error = dwrite.DWriteCreateFactory(.ISOLATED, &dwrite.IFactory_UUID, cast(^^dwrite.IUnknown)&factory)
     
     //- rjf: register font file loader
     error = factory->RegisterFontFileLoader(cast(^dwrite.IFontFileLoader)&font_file_loader)

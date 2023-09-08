@@ -13,32 +13,32 @@ S_OK :: win32.HRESULT(0)
 FONT_PATH :: "C:\\Windows\\Fonts\\arial.ttf"
 
 font_data := #load("./Roboto.ttf")
-fkey: int = 1
+fkey: int = 69
 first_free_stream: ^Font_File_Stream
-// file_data: []byte
+file_data: []byte
 
-// data_from_hash :: proc() -> []byte {
-//     if (file_data == nil) {
-//         ok: bool
-//         fd, err := os.open(FONT_PATH)
-//         if err != 0 {
-//             panic("couldnt open file yo")
-//         }
+data_from_hash :: proc() -> []byte {
+    if (file_data == nil) {
+        ok: bool
+        fd, err := os.open(FONT_PATH)
+        if err != 0 {
+            panic("couldnt open file yo")
+        }
 
-//         file_data, ok = os.read_entire_file_from_handle(fd)
-//         if !ok {
-//             panic("couldnt open file yo")
-//         }
-//         // perhaps we need this?
-//         // virtual.protect(&file_data, size_of(file_data), { .Read })
-//     }
-//     return file_data
-// }
+        file_data, ok = os.read_entire_file_from_handle(fd)
+        if !ok {
+            panic("couldnt open file yo")
+        }
+        // perhaps we need this?
+        // virtual.protect(&file_data, size_of(file_data), { .Read })
+    }
+    return file_data
+}
 
 font_file_stream_ReadFileFragment :: proc "std" (this_ptr: ^dwrite.IFontFileStream, fragment_start: ^rawptr, off: u64, size: u64, fragment_ctx_out: ^rawptr) -> win32.HRESULT {
     fragment_start := fragment_start
     context = runtime.default_context()
-    // data := data_from_hash()
+    data := data_from_hash()
     // Check if the requested fragment is within the file bounds
     // if (off + size > cast(u64)len(data)) {
     //     err := 0x80070057 // E_INVALIDARG
@@ -49,7 +49,7 @@ font_file_stream_ReadFileFragment :: proc "std" (this_ptr: ^dwrite.IFontFileStre
     // testerino: rawptr = raw_data(data[off:])
     // fragment_start = &testerino
     // fmt.println(fragment_start^)
-    fragment_start^ = raw_data(font_data[off:])
+    fragment_start^ = raw_data(data[off:])
     fragment_ctx_out^ = nil
     
     return S_OK
@@ -122,8 +122,8 @@ font_file_stream_ReleaseFileFragment :: proc "std" (this_ptr: ^dwrite.IFontFileS
 
 font_file_stream_GetFileSize :: proc "std" (this_ptr: ^dwrite.IFontFileStream, out_file_size: ^u64) -> win32.HRESULT {
     context = runtime.default_context()
-    // data := data_from_hash()
-    out_file_size^ = cast(u64)len(font_data)
+    data := data_from_hash()
+    out_file_size^ = cast(u64)len(data)
     // fmt.println("Size: ", len(data))
     return S_OK
 }
@@ -165,51 +165,19 @@ font_file_loader_Release :: proc "std" (this_ptr: ^dwrite.IUnknown) -> win32.ULO
     context = runtime.default_context()
     return 1;
 }
-
-// Hash :: struct {
-//     _u64: [2]u64,
-// }
-
-
-// Has to be a problem with RegisterFontFileLoader / CreateCustomFontFileReference /
-// CreateFontFace works with CreateFontFileReference...
-// The problem is probably with ReadFileFragment and how that data is operated on... aka pointer and memory stuff...
 main :: proc() {
-    data := [3]u8 {1, 2, 3}
-
-    fragment_start: ^rawptr
-    for off in 0..<len(data) {
-        slice_data := data[off:]
-        slice_size := len(data[off:])
-
-        testerino: rawptr = raw_data(slice_data)
-        fragment_start = &testerino
-
-        test_address := (cast(^u8)fragment_start^)^
-        fmt.println(test_address)
-    }
-
-
-    // off: u64
-
-    // data := [3]u8 {1, 2, 3}
-    // for off in 0..< len(data) {
-    //     test123 := data[off:]
-    //     fmt.println(test123)
-
-        
-    // }
-
-    // works()
+    fmt.println("\nThis works.\n")
+    works()
+    fmt.println("\nThis does not work.\n")
     no_works()
 }
 
 no_works :: proc() {
-    factory: ^dwrite.IFactory1
+    factory: ^dwrite.IFactory
     error: win32.HRESULT
 
     //- rjf: make dwrite factory
-    error = dwrite.CreateFactory(.ISOLATED, dwrite.IFactory1_UUID, cast(^^dwrite.IUnknown)&factory)
+    error = dwrite.CreateFactory(.ISOLATED, dwrite.IFactory_UUID, cast(^^dwrite.IUnknown)&factory)
     
     //- rjf: register font file loader
     error = factory->RegisterFontFileLoader(cast(^dwrite.IFontFileLoader)&font_file_loader)
@@ -218,64 +186,125 @@ no_works :: proc() {
     font_file: ^dwrite.IFontFile
     error = factory->CreateCustomFontFileReference(&fkey, size_of(fkey), cast(^dwrite.IFontFileLoader)&font_file_loader, &font_file)
     if error != S_OK {
-        panic("help")
+        panic_hr(error)
+    }
+    // See the font file loaded?
+    {
+        fileType: dwrite.FONT_FILE_TYPE
+        faceType: dwrite.FONT_FACE_TYPE
+        numberOfFaces: win32.UINT32
+        isSupported: win32.BOOL
+        error = font_file->Analyze(&isSupported,&fileType, &faceType, &numberOfFaces)
+        if error != S_OK {
+            panic_hr(error)
+        }
+        fmt.println("isSupported ", isSupported, "fileType ", fileType, "faceType ", faceType, "numberOfFaces ", numberOfFaces)
+
+        hash2: rawptr
+        size: u32
+        error = font_file->GetReferenceKey(&hash2, &size)
+        if error != S_OK {
+            panic_hr(error)
+        }
+        fmt.println("Retrieved same reference key: ", fkey == (cast(^int)hash2)^)
     }
 
-
-    // // See the font file loaded?
-    // {
-    //     fileType: dwrite.FONT_FILE_TYPE
-    //     faceType: dwrite.FONT_FACE_TYPE
-    //     numberOfFaces: win32.UINT32
-    //     isSupported: win32.BOOL
-    //     error = font_file->Analyze(&isSupported,&fileType, &faceType, &numberOfFaces)
-    //     if error != S_OK {
-    //         panic("help")
-    //     }
-    //     fmt.println("isSupported ", isSupported, "fileType ", fileType, "faceType ", faceType, "numberOfFaces ", numberOfFaces)
-
-    //     hash2: rawptr
-    //     size: u32
-    //     error = font_file->GetReferenceKey(&hash2, &size)
-    //     if error != S_OK {
-    //         panic("help")
-    //     }
-    //     fmt.println((cast(^int)hash2)^)
-    // }
-
     //- rjf: make dwrite font face
-    font_face: ^dwrite.IFontFace3
+    // font_files := make([]^dwrite.IFontFile, 1)
+    // font_files[0] = font_file
+    font_face: ^dwrite.IFontFace
     error = factory->CreateFontFace(.UNKNOWN, 1, &font_file, 0, { }, &font_face)
 
     if error != S_OK {
         fmt.println(error)
         panic("help")
     }
-    fmt.println("PLEASE WORK!")
+    fmt.println("Font Face:",font_face)
 }
 
-// works :: proc() {
-//     factory: ^dwrite.IFactory
-//     gdi_interop: ^dwrite.IGdiInterop
-//     error: win32.HRESULT
+// This one works with CreateFontFileReference but I want custom reference...
+works :: proc() {
+    factory: ^dwrite.IFactory
+    error: win32.HRESULT
+    wkey:= win32.L(FONT_PATH)
+    //- rjf: make dwrite factory
+    error = dwrite.CreateFactory(.ISOLATED, dwrite.IFactory_UUID, cast(^^dwrite.IUnknown)&factory)
 
-//     //- rjf: make dwrite factory
-//     error = dwrite.DWriteCreateFactory(.ISOLATED, &dwrite.IFactory1_UUID, cast(^^dwrite.IUnknown)&factory)
+    //- rjf: make a "font file reference"... oh boy x2...
+    font_file: ^dwrite.IFontFile
+    error = factory->CreateFontFileReference(wkey, nil, &font_file)
+    if error != S_OK {
+        panic_hr(error)
+    }
 
-//     //- rjf: make a "font file reference"... oh boy x2...
-//     font_file: ^dwrite.IFontFile
-//     error = factory->CreateFontFileReference(win32.L(FONT_PATH), nil, &font_file)
-//     if error != S_OK {
-//         panic("help")
-//     }
-//     // test : =
-//     //- rjf: make dwrite font face
-//     font_face: ^dwrite.IFontFace
-//     error = factory->CreateFontFace(.UNKNOWN, 1, &font_file, 0, { }, &font_face)
+    // See the font file loaded?
+    {
+        fileType: dwrite.FONT_FILE_TYPE
+        faceType: dwrite.FONT_FACE_TYPE
+        numberOfFaces: win32.UINT32
+        isSupported: win32.BOOL
+        error = font_file->Analyze(&isSupported,&fileType, &faceType, &numberOfFaces)
+        if error != S_OK {
+            panic_hr(error)
+        }
+        fmt.println("isSupported ", isSupported, "fileType ", fileType, "faceType ", faceType, "numberOfFaces ", numberOfFaces)
 
-//     if error != S_OK {
-//         fmt.println(error)
-//         panic("help")
-//     }
-//     fmt.println(font_face)
-// }
+        hash2: rawptr
+        size: u32
+        error = font_file->GetReferenceKey(&hash2, &size)
+        if error != S_OK {
+            panic_hr(error)
+        }
+        // fmt.println(win32.wstring_to_utf8(cast([^]u16)hash2,cast(int)size))
+    }
+
+    //- rjf: make dwrite font face
+    font_face: ^dwrite.IFontFace
+    error = factory->CreateFontFace(.UNKNOWN, 1, &font_file, 0, { }, &font_face)
+    if error != S_OK {
+        panic_hr(error)
+    }
+
+    // Get Files Back
+    from_face_count: win32.UINT32
+    error = font_face->GetFiles(&from_face_count, nil)
+    if error != S_OK {
+        panic_hr(error)
+    }
+    from_face_file:= make([]^dwrite.IFontFile, from_face_count) 
+    error = font_face->GetFiles(&from_face_count, raw_data(from_face_file))
+    if error != S_OK {
+        panic_hr(error)
+    }
+
+    // See the font file is back from the font face...
+    {
+        fileType: dwrite.FONT_FILE_TYPE
+        faceType: dwrite.FONT_FACE_TYPE
+        numberOfFaces: win32.UINT32
+        isSupported: win32.BOOL
+        error = from_face_file[0]->Analyze(&isSupported,&fileType, &faceType, &numberOfFaces)
+        if error != S_OK {
+            panic_hr(error)
+        }
+        fmt.println("isSupported ", isSupported, "fileType ", fileType, "faceType ", faceType, "numberOfFaces ", numberOfFaces)
+
+        hash2: rawptr
+        size: u32
+        error = font_file->GetReferenceKey(&hash2, &size)
+        if error != S_OK {
+            panic_hr(error)
+        }
+        get_key, _ := win32.wstring_to_utf8(cast([^]u16)hash2, 100)
+        ws_key, _ := win32.wstring_to_utf8(wkey, 100)
+        fmt.println(get_key, ws_key)
+        fmt.println("Retrieved same reference key: ",  get_key == ws_key)
+    }
+}
+
+panic_hr :: proc(error: win32.HRESULT) {
+    buf: [1024]u16 = ---
+    win32.FormatMessageW(win32.FORMAT_MESSAGE_FROM_SYSTEM, nil, cast(u32)error, 0, raw_data(buf[:]), size_of(buf), nil)
+    message, _ := win32.wstring_to_utf8(raw_data(buf[:]), len(buf))
+    runtime.panic(message)
+}

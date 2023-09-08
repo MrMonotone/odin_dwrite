@@ -166,10 +166,11 @@ font_file_loader_Release :: proc "std" (this_ptr: ^dwrite.IUnknown) -> win32.ULO
     return 1;
 }
 main :: proc() {
-    fmt.println("\nThis works.\n")
+    fmt.println("This works.\n")
     works()
     fmt.println("\nThis does not work.\n")
     no_works()
+    fmt.println("YAHOO!")
 }
 
 no_works :: proc() {
@@ -295,11 +296,12 @@ works :: proc() {
         if error != S_OK {
             panic_hr(error)
         }
-        get_key, _ := win32.wstring_to_utf8(cast([^]u16)hash2, 100)
-        ws_key, _ := win32.wstring_to_utf8(wkey, 100)
-        fmt.println(get_key, ws_key)
-        fmt.println("Retrieved same reference key: ",  get_key == ws_key)
+        // get_key, _ := win32.wstring_to_utf8(cast([^]u16)hash2, 100)
+        // ws_key, _ := win32.wstring_to_utf8(wkey, 100)
+        // fmt.println(get_key, ws_key)
+        // fmt.println("Retrieved same reference key: ",  get_key == ws_key)
     }
+    fmt.println("Font Face:", font_face)
 }
 
 panic_hr :: proc(error: win32.HRESULT) {

@@ -5,11 +5,11 @@ import "core:fmt"
 import win32 "core:sys/windows"
 import "vendor:directx/dxgi"
 
-foreign import Dwrite "system:Dwrite.lib"
+foreign import DWrite "system:Dwrite.lib"
 
-@(default_calling_convention="stdcall")
-foreign Dwrite {
-	DWriteCreateFactory :: proc(factoryType: FACTORY_TYPE, iid: win32.REFIID, factory: ^^IUnknown) -> win32.HRESULT ---
+@(default_calling_convention = "stdcall", link_prefix = "DWrite")
+foreign DWrite {
+	CreateFactory :: proc(factoryType: FACTORY_TYPE, #by_ptr iid: win32.IID, factory: ^^IUnknown) -> HRESULT ---
 }
 
 

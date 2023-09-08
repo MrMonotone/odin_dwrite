@@ -38,18 +38,8 @@ data_from_hash :: proc() -> []byte {
 font_file_stream_ReadFileFragment :: proc "std" (this_ptr: ^dwrite.IFontFileStream, fragment_start: ^rawptr, off: u64, size: u64, fragment_ctx_out: ^rawptr) -> win32.HRESULT {
     fragment_start := fragment_start
     context = runtime.default_context()
-    data := data_from_hash()
-    // Check if the requested fragment is within the file bounds
-    // if (off + size > cast(u64)len(data)) {
-    //     err := 0x80070057 // E_INVALIDARG
-    //     // Return an error if the fragment is out of bounds
-    //     return cast(win32.HRESULT)err
-    // }
-    // fmt.printf("%p\n", file_data)
-    // testerino: rawptr = raw_data(data[off:])
-    // fragment_start = &testerino
-    // fmt.println(fragment_start^)
-    fragment_start^ = raw_data(data[off:])
+
+    fragment_start^ = raw_data(file_data[off:])
     fragment_ctx_out^ = nil
     
     return S_OK
@@ -62,9 +52,11 @@ Font_File_Stream :: struct {
 }
 
 font_file_stream_vtable : dwrite.IFontFileStream_VTable = {
-    QueryInterface = font_file_stream_QueryInterface,
-    AddRef = font_file_stream_AddRef,
-    Release = font_file_stream_Release,
+    iunknown_vtable = {
+        QueryInterface = font_file_stream_QueryInterface,
+        AddRef = font_file_stream_AddRef,
+        Release = font_file_stream_Release,
+    },
     ReadFileFragment = font_file_stream_ReadFileFragment,
     ReleaseFileFragment = font_file_stream_ReleaseFileFragment,
     GetFileSize = font_file_stream_GetFileSize,
@@ -72,17 +64,21 @@ font_file_stream_vtable : dwrite.IFontFileStream_VTable = {
 }
 
 font_file_loader := Font_File_Loader {
-    ifontfileloader_vtable = &font_file_loader_vtable,
+    loader = {
+        ifontfileloader_vtable = &font_file_loader_vtable,
+    }
 }
 
 Font_File_Loader :: struct {
-    using _: dwrite.IFontFileLoader,
+    using loader: dwrite.IFontFileLoader,
 }
 
 font_file_loader_vtable : dwrite.IFontFileLoader_VTable = {
-    QueryInterface = font_file_loader_QueryInterface,
-    AddRef = font_file_loader_AddRef,
-    Release = font_file_loader_Release,
+    iunknown_vtable = {
+        QueryInterface = font_file_loader_QueryInterface,
+        AddRef = font_file_loader_AddRef,
+        Release = font_file_loader_Release,
+    },
     CreateStreamFromKey = font_file_loader_CreateStreamFromKey,
 }
 
@@ -122,8 +118,8 @@ font_file_stream_ReleaseFileFragment :: proc "std" (this_ptr: ^dwrite.IFontFileS
 
 font_file_stream_GetFileSize :: proc "std" (this_ptr: ^dwrite.IFontFileStream, out_file_size: ^u64) -> win32.HRESULT {
     context = runtime.default_context()
-    data := data_from_hash()
-    out_file_size^ = cast(u64)len(data)
+
+    out_file_size^ = cast(u64)len(file_data)
     // fmt.println("Size: ", len(data))
     return S_OK
 }
@@ -174,6 +170,8 @@ main :: proc() {
 }
 
 no_works :: proc() {
+    file_data = data_from_hash();
+
     factory: ^dwrite.IFactory
     error: win32.HRESULT
 
@@ -220,6 +218,7 @@ no_works :: proc() {
         fmt.println(error)
         panic("help")
     }
+    fmt.println("Working!")
     fmt.println("Font Face:",font_face)
 }
 
@@ -244,7 +243,7 @@ works :: proc() {
         faceType: dwrite.FONT_FACE_TYPE
         numberOfFaces: win32.UINT32
         isSupported: win32.BOOL
-        error = font_file->Analyze(&isSupported,&fileType, &faceType, &numberOfFaces)
+        error = font_file->Analyze(&isSupported, &fileType, &faceType, &numberOfFaces)
         if error != S_OK {
             panic_hr(error)
         }
